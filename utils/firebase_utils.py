@@ -1,71 +1,54 @@
 import firebase_admin
-from firebase_admin import credentials, auth, firestore
+from firebase_admin import credentials, firestore
 import streamlit as st
-import json
 
-def init_firebase():
+def initialize_firebase():
     if not firebase_admin._apps:
-        # Fetching GCP Service Account JSON key from st.secrets
         try:
-            # Check if secrets contain firebase config
-            if "firebase" in st.secrets:
-                key_dict = json.loads(st.secrets["firebase"]["service_account"])
-                cred = credentials.Certificate(key_dict)
-                firebase_admin.initialize_app(cred)
-            else:
-                st.error("Firebase secrets not found in st.secrets")
-                return None
+            # Fetching from Streamlit Secrets
+            secret_info = st.secrets["service_account"]
+            
+            cred_dict = {
+                "type": secret_info["type"],
+                "project_id": secret_info["project_id"],
+                "private_key_id": secret_info["private_key_id"],
+                "private_key": secret_info["private_key"].replace('\\n', '\n'),
+                "client_email": secret_info["client_email"],
+                "client_id": secret_info["client_id"],
+                "auth_uri": secret_info["auth_uri"],
+                "token_uri": secret_info["token_uri"],
+                "auth_provider_x509_cert_url": secret_info["auth_provider_x509_cert_url"],
+                "client_x509_cert_url": secret_info["client_x509_cert_url"],
+            }
+            
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
         except Exception as e:
-            st.error(f"Firebase initialization failed: {e}")
+            st.error(f"Firebase Init Error: {e}")
             return None
     return firestore.client()
 
-def get_user_role(db, uid):
+def ensure_user_profile(db, user_data):
+    """Automatically creates a user profile in Firestore if it doesn't exist."""
+    if not db: return
     try:
-        user_ref = db.collection('users').document(uid)
-        doc = user_ref.get()
-        if doc.exists:
-            return doc.to_dict().get('role', 'user')
-    except Exception as e:
-        # Handle PermissionDenied or connection errors gracefully
-        return 'user'
-    return 'user'
-
-def ensure_user_profile(db, uid, email):
-    """
-    Checks if a user exists in Firestore. If not, creates a new profile.
-    """
-    try:
-        user_ref = db.collection('users').document(uid)
-        doc = user_ref.get()
-        if not doc.exists:
+        user_ref = db.collection('users').document(user_data['uid'])
+        if not user_ref.get().exists:
             user_ref.set({
-                'email': email,
+                'email': user_data['email'],
                 'role': 'user',
                 'created_at': firestore.SERVER_TIMESTAMP
             })
-            return True
     except Exception as e:
-        return False
-    return False
+        print(f"Error creating profile: {e}")
 
-def log_generation(db, uid, metadata):
+def get_user_role(db, uid):
+    """Retrieves user role with error handling."""
+    if not db: return 'user'
     try:
-        db.collection('projects').add({
-            'uid': uid,
-            'timestamp': firestore.SERVER_TIMESTAMP,
-            **metadata
-        })
+        user_ref = db.collection('users').document(uid).get()
+        if user_ref.exists:
+            return user_ref.to_dict().get('role', 'user')
     except Exception:
         pass
-
-def get_admin_stats(db):
-    try:
-        users = db.collection('users').stream()
-        projects = db.collection('projects').stream()
-        return {
-            'total_users': len(list(users)),
-            'total_generations': len(list(projects))
-        }
-    except Exception:
-        return {'total_users': 0, 'total_generations': 0}
+    return 'user'
