@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import base64
 from utils.firebase_utils import init_firebase, get_user_role, log_generation, get_admin_stats, ensure_user_profile
 from utils.ai_engine import init_vertex, generate_thumbnail, overlay_icons, get_image_download_link
 
@@ -7,8 +8,7 @@ from utils.ai_engine import init_vertex, generate_thumbnail, overlay_icons, get_
 st.set_page_config(
     page_title="Thumb-Gen AI | House IT LTD",
     page_icon="🎨",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
 # Initialize Firebase and Vertex AI
@@ -54,18 +54,20 @@ def main():
     with st.sidebar:
         st.title("User Profile")
         if not st.session_state.user:
+            st.markdown('<div class="glass-card" style="padding: 1rem;">', unsafe_allow_html=True)
             email = st.text_input("Email", key="login_email")
             password = st.text_input("Password", type="password", key="login_pass")
             if st.button("Login"):
                 # Mock Login logic - In production, use firebase_utils
-                uid = "mock_123"
+                uid = "mock_user_" + email.split('@')[0]
                 st.session_state.user = {"uid": uid, "email": email}
                 # Automatically ensure user profile exists in Firestore
                 if db:
                     ensure_user_profile(db, uid, email)
                 st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
         else:
-            st.write(f"Logged in as: {st.session_state.user['email']}")
+            st.write(f"Logged in as: **{st.session_state.user['email']}**")
             role = get_user_role(db, st.session_state.user['uid']) if db else 'user'
             if role == 'admin':
                 st.success("Admin Access Granted")
@@ -95,25 +97,35 @@ def main():
         st.session_state.stage = 1
     
     stages = ["Style & Subject", "Metadata", "Asset Select", "Quality Presets", "Result"]
+    
+    # Progress Bar
+    progress_val = (st.session_state.stage - 1) / (len(stages) - 1)
+    st.progress(progress_val)
     st.markdown(f"### Stage {st.session_state.stage}: {stages[st.session_state.stage-1]}")
     
     # Render Stage Content
     if st.session_state.stage == 1:
-        st.info("Select your style and upload your subject image.")
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st.subheader("🎨 Style & Subject")
+        st.info("Upload multiple references for style and a single subject image for character focus.")
+        
         col1, col2 = st.columns(2)
         with col1:
-            style = st.selectbox("Select Style", ["Gamer Neon", "Cinematic", "Minimalist"])
+            style = st.selectbox("Select Core Aesthetic", ["Gamer Neon", "Cinematic", "Minimalist"], index=0)
+            style_refs = st.file_uploader("Upload Style References (Multiple)", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
         with col2:
-            uploaded_file = st.file_uploader("Upload Subject (PNG, JPG, JPEG)", type=['png', 'jpg', 'jpeg'])
+            subject_file = st.file_uploader("Upload User Subject (The Person's Face)", type=['png', 'jpg', 'jpeg'])
             
-        if st.button("Next"):
-            if uploaded_file:
+        if st.button("Proceed to Metadata ➡️", use_container_width=True):
+            if subject_file and style_refs:
                 st.session_state.style = style
-                st.session_state.subject = uploaded_file
+                st.session_state.style_refs = style_refs
+                st.session_state.subject = subject_file
                 st.session_state.stage = 2
                 st.rerun()
             else:
-                st.warning("Please upload a subject image to proceed.")
+                st.warning("Please upload at least one style reference and a subject image.")
+        st.markdown('</div>', unsafe_allow_html=True)
         
     elif st.session_state.stage == 2:
         st.markdown('<div class="glass-card">', unsafe_allow_html=True)
@@ -125,7 +137,7 @@ def main():
         if col1.button("Back"):
             st.session_state.stage = 1
             st.rerun()
-        if col2.button("Next Stage ➡️"):
+        if col2.button("Next Stage ➡️", use_container_width=True):
             if title:
                 st.session_state.title = title
                 st.session_state.keywords = keywords
@@ -138,7 +150,7 @@ def main():
     elif st.session_state.stage == 3:
         st.markdown('<div class="glass-card">', unsafe_allow_html=True)
         st.subheader("🎨 Asset & Icon Selection")
-        st.info("The AI will automatically position these based on your title.")
+        st.info("The AI will automatically position these based on your title and theme.")
         
         col1, col2 = st.columns(2)
         use_gpt = col1.checkbox("ChatGPT 3D Icon", value=st.session_state.get('use_gpt', "ChatGPT" in st.session_state.get('title', '')))
@@ -149,7 +161,7 @@ def main():
         if c1.button("Back"):
             st.session_state.stage = 2
             st.rerun()
-        if c2.button("Proceed to Quality ➡️"):
+        if c2.button("Proceed to Quality ➡️", use_container_width=True):
             st.session_state.use_gpt = use_gpt
             st.session_state.use_bkash = use_bkash
             st.session_state.stage = 4
@@ -161,19 +173,20 @@ def main():
         st.subheader("⚙️ Quality & Generation")
         quality = st.select_slider("Select Engine Intensity", options=["Draft (Fast)", "HD (Balanced)", "Ultra (Pro)"])
         
-        st.warning("Vertex AI (Nano Banana) will generate a 1280x720 PNG.")
+        st.warning("Vertex AI (Nano Banana) will generate a high-fidelity 1280x720 PNG.")
         
         c1, c2 = st.columns([1, 4])
         if c1.button("Back"):
             st.session_state.stage = 3
             st.rerun()
-        if c2.button("🚀 GENERATE THUMBNAIL"):
+        if c2.button("🚀 GENERATE THUMBNAIL", use_container_width=True):
             st.session_state.quality = quality
-            with st.spinner("Neon Core processing... Analyzing subject and prompt..."):
+            with st.spinner("Neon Core processing... Merging references and character subject..."):
                 # Pass all context to the engine
                 img = generate_thumbnail(
                     prompt=f"{st.session_state.style} style, YT thumbnail for '{st.session_state.title}', high quality, neon vibes",
-                    subject_image=st.session_state.subject
+                    subject_image=st.session_state.subject,
+                    reference_images=st.session_state.style_refs
                 )
                 
                 # Apply overlays based on user selection
@@ -214,9 +227,9 @@ def main():
             </div>
         ''', unsafe_allow_html=True)
         
-        if st.button("🔄 Start New Generation"):
+        if st.button("🔄 Start New Generation", use_container_width=True):
             # Reset workflow state
-            keys_to_clear = ['style', 'subject', 'title', 'keywords', 'use_gpt', 'use_bkash', 'quality', 'final_image']
+            keys_to_clear = ['style', 'style_refs', 'subject', 'title', 'keywords', 'use_gpt', 'use_bkash', 'quality', 'final_image']
             for k in keys_to_clear:
                 if k in st.session_state:
                     del st.session_state[k]
@@ -234,6 +247,7 @@ def main():
     floating_whatsapp()
 
 def render_admin_dashboard():
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
     st.title("Admin Control Panel")
     if st.button("Back to Generator"):
         st.session_state.page = "main"
@@ -242,14 +256,14 @@ def render_admin_dashboard():
     if db:
         stats = get_admin_stats(db)
         cols = st.columns(3)
-        cols[0].metric("Total Users", stats['total_users'])
-        cols[1].metric("Total Generations", stats['total_generations'])
+        cols[0].metric("Total Users", stats.get('total_users', 0))
+        cols[1].metric("Total Generations", stats.get('total_generations', 0))
         
         st.subheader("Recent User Activity")
-        # In a real app, you'd fetch and display user logs here
-        st.info("Log tracking is active in Firestore.")
+        st.info("User logs and project history are securely stored in Firestore.")
     else:
         st.warning("Firebase not initialized. Admin stats unavailable.")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
