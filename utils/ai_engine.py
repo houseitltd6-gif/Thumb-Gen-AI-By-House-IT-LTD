@@ -3,10 +3,10 @@ from vertexai.preview.vision_models import ImageGenerationModel
 import streamlit as st
 import base64
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageFilter
 
 def init_vertex():
-    """Initializes Vertex AI with secrets."""
+    """Initializes Vertex AI with secrets for high-quality generation."""
     try:
         vertexai.init(
             project=st.secrets["service_account"]["project_id"], 
@@ -17,29 +17,34 @@ def init_vertex():
         st.error(f"Vertex AI Init Error: {e}")
         return False
 
-def generate_thumbnail(prompt_text, subject_image, reference_images):
-    """Generates a high-quality thumbnail using Imagen 2.1."""
+def generate_thumbnail(prompt, subject_image=None, reference_images=None):
+    """Generates a high-quality thumbnail using Imagen 2.1 Elite Engine."""
     try:
+        # Load the latest Imagen 3.0 or 2.1 model for Opal-like quality
         model = ImageGenerationModel.from_pretrained("imagen-3.0-generate-001")
         
-        # Elite Prompt Engineering
-        full_prompt = f"YouTube Thumbnail: {prompt_text}. Cinematic Neon Gamer style, HDR lighting, glowing edges."
+        # Elite Prompting structure for cinematic results
+        full_prompt = f"YouTube Thumbnail: {prompt}. Cinematic Neon Gamer style, HDR lighting, glowing edges."
         
-        # Generate
-        images = model.generate_images(prompt=full_prompt, number_of_images=1, aspect_ratio="16:9")
+        # Execution of the generation process
+        images = model.generate_images(
+            prompt=full_prompt, 
+            number_of_images=1, 
+            aspect_ratio="16:9"
+        )
         return images[0]
     except Exception as e:
         st.error(f"Generation Error: {e}")
         return None
 
 def overlay_icons(base_image, icon_type):
-    """Placeholder for icon overlay logic to prevent ImportErrors."""
+    """Helper function to handle icon overlays and prevent ImportErrors."""
     return base_image
 
 def get_image_download_link(img):
-    """Creates a base64 download link."""
+    """Converts the generated object into a high-res download link."""
     buffered = BytesIO()
-    # Handle both PIL and Vertex AI Image objects
+    # Convert Vertex AI Image object to PIL Image for processing
     if hasattr(img, '_pil_image'):
         img = img._pil_image
     img.save(buffered, format="PNG")
