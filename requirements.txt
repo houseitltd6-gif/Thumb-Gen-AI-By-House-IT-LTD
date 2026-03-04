@@ -1,6 +1,5 @@
 streamlit
-google-cloud-aiplatform
 firebase-admin
+google-cloud-aiplatform
 Pillow
-requests
-python-dotenv
+google-auth
