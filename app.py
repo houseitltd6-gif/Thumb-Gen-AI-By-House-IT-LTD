@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-from utils.firebase_utils import init_firebase, get_user_role, log_generation, get_admin_stats
+from utils.firebase_utils import init_firebase, get_user_role, log_generation, get_admin_stats, ensure_user_profile
 from utils.ai_engine import init_vertex, generate_thumbnail, overlay_icons, get_image_download_link
 
 # Page Configuration
@@ -54,11 +54,15 @@ def main():
     with st.sidebar:
         st.title("User Profile")
         if not st.session_state.user:
-            email = st.text_input("Email")
-            password = st.text_input("Password", type="password")
+            email = st.text_input("Email", key="login_email")
+            password = st.text_input("Password", type="password", key="login_pass")
             if st.button("Login"):
                 # Mock Login logic - In production, use firebase_utils
-                st.session_state.user = {"uid": "mock_123", "email": email}
+                uid = "mock_123"
+                st.session_state.user = {"uid": uid, "email": email}
+                # Automatically ensure user profile exists in Firestore
+                if db:
+                    ensure_user_profile(db, uid, email)
                 st.rerun()
         else:
             st.write(f"Logged in as: {st.session_state.user['email']}")
@@ -90,33 +94,43 @@ def main():
     if 'stage' not in st.session_state:
         st.session_state.stage = 1
     
-    stages = ["Style Ref", "Subject Upload", "Metadata", "Quality Presets", "Result"]
+    stages = ["Style & Subject", "Metadata", "Asset Select", "Quality Presets", "Result"]
     st.markdown(f"### Stage {st.session_state.stage}: {stages[st.session_state.stage-1]}")
     
     # Render Stage Content
     if st.session_state.stage == 1:
-        st.info("Choose your thumbnail style reference.")
-        style = st.selectbox("Select Style", ["Gamer Neon", "Cinematic", "Minimalist"])
+        st.info("Select your style and upload your subject image.")
+        col1, col2 = st.columns(2)
+        with col1:
+            style = st.selectbox("Select Style", ["Gamer Neon", "Cinematic", "Minimalist"])
+        with col2:
+            uploaded_file = st.file_uploader("Upload Subject (PNG, JPG, JPEG)", type=['png', 'jpg', 'jpeg'])
+            
         if st.button("Next"):
-            st.session_state.style = style
-            st.session_state.stage = 2
-            st.rerun()
+            if uploaded_file:
+                st.session_state.style = style
+                st.session_state.subject = uploaded_file
+                st.session_state.stage = 2
+                st.rerun()
+            else:
+                st.warning("Please upload a subject image to proceed.")
         
     elif st.session_state.stage == 2:
-        st.info("Upload your subject image or character.")
-        uploaded_file = st.file_uploader("Upload Image", type=['png', 'jpg', 'jpeg'])
-        if uploaded_file:
-            st.session_state.subject = uploaded_file
-            if st.button("Next"):
-                st.session_state.stage = 3
-                st.rerun()
-            
-    elif st.session_state.stage == 3:
         title = st.text_input("Thumbnail Title (e.g., 'ChatGPT Secrets')")
         keywords = st.text_area("Additional Keywords")
         if st.button("Next"):
             st.session_state.title = title
             st.session_state.keywords = keywords
+            st.session_state.stage = 3
+            st.rerun()
+
+    elif st.session_state.stage == 3:
+        st.info("Select specific overlay icons or assets.")
+        use_gpt = st.checkbox("ChatGPT Icon", value="ChatGPT" in st.session_state.get('title', ''))
+        use_bkash = st.checkbox("bKash Icon", value="bKash" in st.session_state.get('title', ''))
+        if st.button("Next"):
+            st.session_state.use_gpt = use_gpt
+            st.session_state.use_bkash = use_bkash
             st.session_state.stage = 4
             st.rerun()
         
@@ -142,10 +156,14 @@ def main():
         
         # Download Link Handling
         img_data = get_image_download_link(st.session_state.final_image)
-        st.markdown(f'<a href="{img_data}" download="thumbnail.png" class="stButton"><button>Download High-Res (.png)</button></a>', unsafe_allow_html=True)
+        st.markdown(f'<a href="{img_data}" download="thumbnail.png" class="stButton"><button style="width:100%">Download High-Res (.png)</button></a>', unsafe_allow_html=True)
         
         if st.button("Start New"):
             st.session_state.stage = 1
+            # Clear stage-specific state
+            for key in ['style', 'subject', 'title', 'keywords', 'final_image']:
+                if key in st.session_state:
+                    del st.session_state[key]
             st.rerun()
 
     # Footer
@@ -177,7 +195,3 @@ def render_admin_dashboard():
 
 if __name__ == "__main__":
     main()
-
-
-
-
