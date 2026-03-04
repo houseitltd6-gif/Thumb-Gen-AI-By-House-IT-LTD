@@ -1,74 +1,41 @@
 import vertexai
-from vertexai.generative_models import GenerativeModel, Part
+from vertexai.preview.vision_models import ImageGenerationModel
 import streamlit as st
-from PIL import Image, ImageDraw, ImageFont
-import io
 import base64
+from io import BytesIO
+from PIL import Image
 
-def init_vertex():
-    if "gcp" in st.secrets:
-        # Placeholder for Vertex AI initialization logic
-        # vertexai.init(project=st.secrets["gcp"]["project_id"], location="us-central1")
-        pass
-
-def generate_thumbnail(prompt, subject_image=None, reference_images=None):
-    """
-    Integrates Google Nano Banana via Vertex AI.
-    Generates a new YouTube thumbnail based on the uploaded subject's face 
-    while maintaining the aesthetic of the reference images.
-    """
-    # Vertex AI Logic (Placeholder for real implementation)
-    # The prompt should be structured as:
-    # "Generate a new YouTube thumbnail based on the uploaded subject's face while maintaining the aesthetic of the reference images. Context: {prompt}"
-    
-    # 1. Create a dynamic background based on prompt keywords (Mocking AI variation)
-    color_map = {
-        "Gamer Neon": (15, 0, 30),
-        "Cinematic": (10, 10, 10),
-        "Minimalist": (240, 240, 240)
-    }
-    bg_color = color_map.get(next((k for k in color_map if k in prompt), "Gamer Neon"), (5, 5, 5))
-    
-    base_img = Image.new('RGB', (1280, 720), color=bg_color)
-    d = ImageDraw.Draw(base_img)
-    
-    # 2. Add Neon Gradients/Glow (Mocking AI Style)
-    if "Neon" in prompt or "Gamer" in prompt:
-        for i in range(0, 1280, 10):
-            alpha = int(255 * (1 - i / 1280))
-            d.line([(i, 0), (i, 720)], fill=(0, 243, 255, alpha), width=2)
-            
-    # 3. Handle Subject Integration (Mocking AI Face Transfer)
-    if subject_image:
-        subj = Image.open(subject_image).convert("RGBA")
-        # We simulate "Generating based on face" by stylizing the subject
-        subj.thumbnail((550, 550))
-        # Add a glow effect around the subject (simulated generation)
-        base_img.paste(subj, (650, 100), subj) # Move to right for better composition
+def generate_thumbnail(prompt_text, subject_image, reference_images):
+    try:
+        # Initialize Vertex AI with Project ID from Secrets
+        vertexai.init(project=st.secrets["service_account"]["project_id"], location="us-central1")
         
-    # 4. Result Finalization
-    return base_img
-
-def overlay_icons(image, title):
-    """
-    Smart Asset Handling: Automatically detect keywords and overlay 3D icons.
-    """
-    draw = ImageDraw.Draw(image)
-    if "ChatGPT" in title:
-        # Mock logic: Draw a square as a ChatGPT icon placeholder
-        draw.rectangle([1100, 50, 1200, 150], fill=(0, 255, 0))
-    
-    if "bKash" in title:
-        # Mock logic: Draw a circle as a bKash icon placeholder
-        draw.ellipse([1100, 200, 1200, 300], fill=(231, 31, 107))
+        # Load Imagen 2.1 Model
+        model = ImageGenerationModel.from_pretrained("imagen-3.0-generate-001") # Use latest available
         
-    return image
+        # Elite Prompt Engineering for Opal-like quality
+        full_prompt = f"""
+        YouTube Thumbnail Masterpiece: {prompt_text}. 
+        Style: High-contrast Neon Gamer aesthetic, HDR lighting, cinematic depth.
+        Composition: Subject focused on the right side, bold 3D typography placeholders on the left.
+        Details: Glowing outlines, vibrant particles, matching the provided style references perfectly.
+        """
+        
+        # Generating image
+        images = model.generate_images(
+            prompt=full_prompt,
+            number_of_images=1,
+            aspect_ratio="16:9",
+            guidance_scale=15.0 # Higher scale for better adherence to prompt
+        )
+        
+        return images[0]
+    except Exception as e:
+        st.error(f"Imagen Generation Error: {e}")
+        return None
 
 def get_image_download_link(img):
-    """
-    Ensures the final image is processed as a Blob and handles PNG download.
-    """
-    buffered = io.BytesIO()
+    buffered = BytesIO()
     img.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
-    return f"data:image/png;base64,{img_str}"
+    return f'<a href="data:image/png;base64,{img_str}" download="thumbnail.png" class="download-button">DOWNLOAD HIGH-RES (.PNG)</a>'
