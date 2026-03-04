@@ -1,0 +1,106 @@
+/* Neon Gamer Aesthetic - Thumb-Gen AI By House IT LTD */
+
+:root {
+    --bg-color: #050505;
+    --card-bg: rgba(15, 15, 25, 0.7);
+    --neon-cyan: #00f3ff;
+    --neon-magenta: #ff00ff;
+    --text-color: #ffffff;
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Inter', sans-serif;
+}
+
+/* Glassmorphism Container */
+.stApp {
+    background: radial-gradient(circle at top right, rgba(0, 243, 255, 0.05), transparent),
+                radial-gradient(circle at bottom left, rgba(255, 0, 255, 0.05), transparent);
+}
+
+.glass-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Neon Glow Buttons */
+.stButton>button {
+    background: transparent;
+    color: var(--neon-cyan);
+    border: 2px solid var(--neon-cyan);
+    border-radius: 8px;
+    padding: 0.5rem 2rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 5px var(--neon-cyan);
+}
+
+.stButton>button:hover {
+    background: var(--neon-cyan);
+    color: var(--bg-color);
+    box-shadow: 0 0 20px var(--neon-cyan);
+}
+
+/* Typewriter Effect */
+@keyframes typewriter {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+.typewriter {
+    overflow: hidden;
+    white-space: nowrap;
+    margin: 0 auto;
+    letter-spacing: .15em;
+    animation: typewriter 3.5s steps(40, end);
+    color: var(--neon-magenta);
+    text-shadow: 0 0 10px var(--neon-magenta);
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* Floating WhatsApp Button */
+.whatsapp-float {
+    position: fixed;
+    bottom: 40px;
+    right: 40px;
+    background-color: #25d366;
+    color: white;
+    border-radius: 50px;
+    text-align: center;
+    font-size: 30px;
+    box-shadow: 2px 2px 3px #999;
+    z-index: 100;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: transform 0.3s ease;
+}
+
+.whatsapp-float:hover {
+    transform: scale(1.1);
+}
+
+/* AdSense Placeholders */
+.adsense-placeholder {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px dashed var(--glass-border);
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.3);
+    margin: 1rem 0;
+}

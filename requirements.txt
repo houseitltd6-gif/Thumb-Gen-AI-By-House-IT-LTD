@@ -1,0 +1,6 @@
+streamlit
+google-cloud-aiplatform
+firebase-admin
+Pillow
+requests
+python-dotenv
