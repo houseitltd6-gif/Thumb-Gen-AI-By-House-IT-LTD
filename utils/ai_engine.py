@@ -3,6 +3,7 @@ from vertexai.generative_models import GenerativeModel, Part
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
 import io
+import base64
 
 def init_vertex():
     if "gcp" in st.secrets:
@@ -10,25 +11,29 @@ def init_vertex():
         # vertexai.init(project=st.secrets["gcp"]["project_id"], location="us-central1")
         pass
 
-def generate_thumbnail(prompt, subject_image=None):
+def generate_thumbnail(prompt, subject_image=None, reference_images=None):
     """
     Integrates Google Nano Banana via Vertex AI (Mock logic for local testing)
-    In a real scenario, this would call the Vertex AI Image Generation API.
+    Now supports multiple reference images and a separate user subject.
     """
-    # Placeholder for the actual Nano Banana API call
-    # model = GenerativeModel("nano-banana")
-    # response = model.generate_content(...)
+    # In a real scenario, this would call the Vertex AI Image Generation API.
+    # We would pass the prompt, references for style, and subject for character focus.
     
     # Simulate a 1280x720 generation
     base_img = Image.new('RGB', (1280, 720), color=(10, 10, 20))
     d = ImageDraw.Draw(base_img)
-    d.text((500, 300), "AI Generated Thumbnail", fill=(0, 243, 255))
+    d.text((450, 300), "AI Generated Premium Thumbnail", fill=(0, 243, 255))
     
+    # Simulate processing references
+    if reference_images:
+        # logic to incorporate style from multi-refs
+        pass
+
     # Overlay subject if provided
     if subject_image:
         subj = Image.open(subject_image).convert("RGBA")
-        subj.thumbnail((400, 400))
-        base_img.paste(subj, (50, 200), subj)
+        subj.thumbnail((500, 500))
+        base_img.paste(subj, (50, 150), subj)
         
     return base_img
 
