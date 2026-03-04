@@ -184,7 +184,7 @@ def main():
             with st.spinner("Neon Core processing... Merging references and character subject..."):
                 # Pass all context to the engine
                 img = generate_thumbnail(
-                    prompt=f"{st.session_state.style} style, YT thumbnail for '{st.session_state.title}', high quality, neon vibes",
+                    prompt=f"Generate a new YouTube thumbnail based on the uploaded subject's face while maintaining the aesthetic of the reference images. Context: {st.session_state.style} style, YT thumbnail for '{st.session_state.title}'",
                     subject_image=st.session_state.subject,
                     reference_images=st.session_state.style_refs
                 )
