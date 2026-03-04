@@ -9,7 +9,13 @@ def init_firebase():
         try:
             # Check if secrets contain firebase config
             if "firebase" in st.secrets:
-                key_dict = json.loads(st.secrets["gcp_service_account"])
+                service_account_info = st.secrets["gcp_service_account"]
+if isinstance(service_account_info, str):
+    key_dict = json.loads(service_account_info)
+else:
+    key_dict = dict(service_account_info)
+
+cred = credentials.Certificate(key_dict)
                 cred = credentials.Certificate(key_dict)
                 firebase_admin.initialize_app(cred)
             else:
