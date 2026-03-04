@@ -46,11 +46,7 @@ def generate_thumbnail(prompt, subject_image=None, reference_images=None):
         # Add a glow effect around the subject (simulated generation)
         base_img.paste(subj, (650, 100), subj) # Move to right for better composition
         
-    # 4. Add Metadata Text with AI positioning
-    title_text = prompt.split("for '")[1].split("'")[0] if "for '" in prompt else "AI GEN"
-    d.text((50, 250), title_text.upper(), fill=(255, 0, 255), font_size=80)
-    d.text((50, 350), "ULTRA QUALITY", fill=(0, 243, 255), font_size=40)
-        
+    # 4. Result Finalization
     return base_img
 
 def overlay_icons(image, title):
@@ -61,12 +57,10 @@ def overlay_icons(image, title):
     if "ChatGPT" in title:
         # Mock logic: Draw a square as a ChatGPT icon placeholder
         draw.rectangle([1100, 50, 1200, 150], fill=(0, 255, 0))
-        draw.text((1110, 80), "GPT", fill=(255, 255, 255))
     
     if "bKash" in title:
         # Mock logic: Draw a circle as a bKash icon placeholder
         draw.ellipse([1100, 200, 1200, 300], fill=(231, 31, 107))
-        draw.text((1115, 240), "BK", fill=(255, 255, 255))
         
     return image
 
